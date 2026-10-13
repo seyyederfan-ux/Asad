@@ -47,8 +47,6 @@ flutter:
 
   assets:
     - assets/
-    - assets/CountryFlags/
-    - assets/fonts/
 
   fonts:
     - family: PlusJakartaSans
