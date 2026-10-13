@@ -1,71 +1,33 @@
-name: ccloud_gui
-description: "CCloud PRO — a modern Fluent 2 / Acrylic Glass desktop client for the CCloud streaming platform (movies, series, live TV, downloads & subtitles)."
-publish_to: 'none'
-
-version: 2.0.0+6
-
-environment:
-  sdk: ^3.9.2
-
-dependencies:
-  flutter:
-    sdk: flutter
-
-  # State management & routing (preserved from the original project)
-  provider: ^6.1.2
-  go_router: ^14.0.0
-
-  # Networking & persistence (preserved from the original project)
-  http: ^1.2.2
-  shared_preferences: ^2.3.2
-  path_provider: ^2.1.4
-
-  # Desktop shell & windowing
-  window_manager: ^0.3.8
-  flutter_acrylic: ^1.1.4
-  url_launcher: ^6.3.0
-  share_plus: ^9.0.0
-
-  # Media playback (in-app player) & platform helpers
-  media_kit: ^1.1.10
-  media_kit_video: ^1.2.4
-  media_kit_libs_video: ^1.0.7
-  ffi: ^2.1.2
-  image: ^4.2.0
-
-  # Native desktop file pickers (subtitles & download directory)
-  file_picker: ^8.0.3
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^5.0.0
-
-flutter:
-
-  uses-material-design: true
-
-  assets:
-    - assets/
-    - assets/CountryFlags/
-    - assets/fonts/
-
-  fonts:
-    - family: PlusJakartaSans
-      fonts:
-        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
-          weight: 700
-        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
-          weight: 800
-    - family: Vazirmatn
-      fonts:
-        - asset: assets/fonts/Vazirmatn-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/Vazirmatn-Bold.ttf
-          weight: 700
+# Codemagic workflow: build CCloud PRO Windows Setup.exe
+workflows:
+  windows-release:
+    name: CCloud PRO Windows Build
+    max_build_duration: 60
+    instance_type: windows_x2
+    environment:
+      flutter: 3.35.7
+    scripts:
+      - name: Flutter pub get
+        script: flutter pub get
+      - name: Analyze
+        script: flutter analyze
+      - name: Build Windows release
+        script: flutter build windows --release
+      - name: Install Inno Setup
+        script: |
+          $url = "https://files.jrsoftware.org/is/6/innosetup-6.3.3.exe"
+          $installer = "$env:TEMP\innosetup.exe"
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          Start-Process -FilePath $installer -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait
+      - name: Build installer (Inno Setup)
+        script: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
+          & $iscc "installer\CCloudPro.iss"
+      - name: Collect artifacts
+        script: |
+          New-Item -ItemType Directory -Force -Path "$CM_BUILD_DIR\artifacts" | Out-Null
+          Copy-Item "dist\*.exe" "$CM_BUILD_DIR\artifacts\" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "$CM_BUILD_DIR\artifacts\CCloudPro-2.0.0-Portable.zip" -Force
+    artifacts:
+      - artifacts/**
