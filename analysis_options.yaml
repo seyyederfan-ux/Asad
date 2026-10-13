@@ -1,0 +1,24 @@
+# Static analysis for CCloud PRO (Fluent 2 / Acrylic rebuild).
+# The curated ruleset keeps the flutter_lints guardrails while silencing
+# purely cosmetic churn rules, so `flutter analyze` stays focused on real
+# correctness issues (zero errors / zero warnings / zero infos is the bar).
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    # ---- Cosmetic churn: disabled by design decision ----
+    prefer_const_constructors: false
+    prefer_const_constructors_in_immutables: false
+    prefer_const_literals_to_create_immutables: false
+    sort_child_properties_last: false
+    use_key_in_widget_constructors: false
+    prefer_final_fields: false
+
+    # Console output is routed through debugPrint in release-safe code paths;
+    # keep the lint active to catch accidental prints.
+    avoid_print: true
