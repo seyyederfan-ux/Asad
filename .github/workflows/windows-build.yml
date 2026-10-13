@@ -1,0 +1,52 @@
+name: Build Windows Release
+
+on:
+  workflow_dispatch:   # دستی اجرا می‌شه
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.7'
+          channel: 'stable'
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Flutter analyze
+        run: flutter analyze
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Install Inno Setup
+        run: |
+          $url = "https://files.jrsoftware.org/is/6/innosetup-6.3.3.exe"
+          $installer = "$env:TEMP\innosetup.exe"
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          Start-Process -FilePath $installer -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait
+
+      - name: Build installer (Inno Setup)
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "C:\Program Files\Inno Setup 6\ISCC.exe" }
+          & $iscc "installer\CCloudPro.iss"
+
+      - name: Collect artifacts
+        run: |
+          New-Item -ItemType Directory -Force -Path "artifacts" | Out-Null
+          Copy-Item "dist\*.exe" "artifacts\" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "artifacts\CCloudPro-2.0.0-Portable.zip" -Force
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CCloudPro-Windows
+          path: artifacts/**
